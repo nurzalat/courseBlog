@@ -11,6 +11,10 @@ from django.contrib.auth.models import User
 from blog_api import serializers
 from blog_api.models import Category, Post
 
+# TODO add permissions to post and comment
+# TODO end comment CRUD
+# TODO add likes
+
 
 class UserRegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -35,11 +39,12 @@ class UserDetailedView(generics.RetrieveAPIView):
 class PostView(APIView):
     def get(self, request):
         posts = Post.objects.all()
-        serializer = serializers.PostSerializer(posts, many=True,)
+        serializer = serializers.PostSerializer(posts, many=True, context={'request': self.request})
+        # context={'request': 'format': self.format_kwarg, self.request, 'view': self}
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = serializers.PostSerializer(data=request.data)
+        serializer = serializers.PostSerializer(data=request.data, context={'request': self.request})
         if serializer.is_valid():
             serializer.save(owner=request.user)
             return Response(serializer.data)
@@ -111,6 +116,6 @@ class PostDetailView(APIView):
 #     queryset = Post.objects.all()
 #     serializer_class = serializers.PostSerializer
 
-# class CategoryListView(generics.ListAPIView):
-#     queryset = Category.objects.all()
-#     serializer_class = serializers.CategorySerializer
+class CategoryListView(generics.ListAPIView):
+    queryset = Category.objects.all()
+    serializer_class = serializers.CategorySerializer

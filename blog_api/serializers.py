@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from blog_api.models import Category, Post
+from blog_api.models import Category, Post, PostImages, Comment
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -53,11 +53,37 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class PostImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostImages
+        exclude = ('id',)
+
+
 class PostSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(
         source='owner.username'
     )
+    image_to_post = PostImageSerializer(many=True, read_only=False, required=False)
 
     class Meta:
         model = Post
-        fields = ('id', 'title', 'body', 'owner', 'preview', 'category',)
+        fields = ('id', 'title', 'body', 'owner', 'preview', 'image_to_post', 'category',)
+
+    def create(self, validated_data):
+        # print('validated_data: ', validated_data)
+        request = self.context.get('request')
+        # print('request ', request)
+        # print('Files: ', request.FILES)
+        images_data = request.FILES
+        created_post = Post.objects.create(**validated_data)
+        # print(created_post)
+        # print('worked', images_data.getlist('image_to_post'))
+        images_objects = [PostImages(post=created_post, image=image) for image in images_data.getlist('image_to_post')]
+        PostImages.objects.bulk_create(images_objects)
+        return created_post
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = '__all__'

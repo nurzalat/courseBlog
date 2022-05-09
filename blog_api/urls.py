@@ -25,4 +25,6 @@ urlpatterns = [
     # API views link
     path('posts/', views.PostView.as_view()),
     path('posts/<int:pk>/', views.PostDetailView.as_view()),
+
+    path('categories/', views.CategoryListView.as_view()),
 ]
