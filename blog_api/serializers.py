@@ -59,15 +59,24 @@ class PostImageSerializer(serializers.ModelSerializer):
         exclude = ('id',)
 
 
+class CommentSerializer(serializers.ModelSerializer):
+    owner = serializers.ReadOnlyField(source='owner.username')
+
+    class Meta:
+        model = Comment
+        fields = ('id', 'body', 'owner', 'created_at', 'post',)
+
+
 class PostSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(
         source='owner.username'
     )
     image_to_post = PostImageSerializer(many=True, read_only=False, required=False)
+    comment_to_post = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = Post
-        fields = ('id', 'title', 'body', 'owner', 'preview', 'image_to_post', 'category',)
+        fields = ('id', 'title', 'body', 'owner', 'preview', 'image_to_post', 'category', 'comment_to_post', )
 
     def create(self, validated_data):
         # print('validated_data: ', validated_data)
@@ -81,9 +90,3 @@ class PostSerializer(serializers.ModelSerializer):
         images_objects = [PostImages(post=created_post, image=image) for image in images_data.getlist('image_to_post')]
         PostImages.objects.bulk_create(images_objects)
         return created_post
-
-
-class CommentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Comment
-        fields = '__all__'
