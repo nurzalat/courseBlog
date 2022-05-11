@@ -44,7 +44,7 @@ class UserListSerializer(serializers.ModelSerializer):
 class UserDetailedSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
+        exclude = ('password',)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -90,3 +90,16 @@ class PostSerializer(serializers.ModelSerializer):
         images_objects = [PostImages(post=created_post, image=image) for image in images_data.getlist('image_to_post')]
         PostImages.objects.bulk_create(images_objects)
         return created_post
+
+    def is_liked(self, post):
+        user = self.context.get('request').user
+        return user.like_to_user.filter(post=post).exists()
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['comments_detail'] = CommentSerializer(instance.comment_to_post.all(), many=True).data
+        user = self.context.get('request').user
+        if user.is_authenticated:
+            representation['is_liked'] = self.is_liked(instance)
+        representation['likes_count'] = instance.like_to_post.count()
+        return representation

@@ -1,6 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from rest_auth.views import LogoutView
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from rest_framework.decorators import action
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.pagination import PageNumberPagination
@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from django.contrib.auth.models import User
 from blog_api import serializers
-from blog_api.models import Category, Post, Comment
+from blog_api.models import Category, Post, Comment, Likes
 from blog_api.permissions import IsAuthor
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -66,12 +66,31 @@ class PostViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
+    # api/v1/posts/<id>/comments/
     @action(['GET'], detail=True)
     def comments(self, request, pk):
         post = self.get_object()
         comments = post.comment_to_post.all()
         serializer = serializers.CommentSerializer(comments, many=True)
         return Response(serializer.data)
+
+    # api/v1/posts/<id>/add_to_liked/
+    @action(['POST'], detail=True)
+    def add_to_liked(self, request, pk):
+        post = self.get_object()
+        if request.user.like_to_user.filter(post=post).exists():
+            # request.user.like_to_user.filter(post=post).delete()
+            return Response('Already liked', status=status.HTTP_400_BAD_REQUEST)
+        Likes.objects.create(post=post, user=request.user)
+        return Response('Added to liked posts', status=status.HTTP_201_CREATED)
+
+    @action(['POST'], detail=True)
+    def remove_from_liked(self, request, pk):
+        post = self.get_object()
+        if not request.user.like_to_user.filter(post=post).exists():
+            return Response('You have\'t liked post yet', status=status.HTTP_400_BAD_REQUEST)
+        request.user.like_to_user.filter(post=post).delete()
+        return Response('Removed from liked posts', status=status.HTTP_204_NO_CONTENT)
 
     def get_permissions(self):
         # only authenticated user can create a post

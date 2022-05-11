@@ -74,3 +74,5 @@ class Likes(models.Model):
 
     class Meta:
         unique_together = ['post', 'user']
+        verbose_name = 'like'
+        verbose_name_plural = 'likes'
